@@ -716,7 +716,7 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
   
     if (dirp)
     {
-      // First set all the files to read-only. This is so we can skip
+      // First set the sticky bit on all files. This is so we can skip
       // our new zipfiles if they are returned by readdir() a second time.
       while (direntp = readdir (dirp))
       {
@@ -732,7 +732,7 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
   
           if (strstr (szTmpBuf, ".zip\0"))
           {
-            chmod (direntp->d_name, S_IRUSR);
+            chmod (direntp->d_name, istat.st_mode | S_ISUID);
           }
         }
         // Zip file is actually a dir
@@ -780,9 +780,9 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
           sprintf (szTmpBuf, "%s", direntp->d_name);
           strlwr (szTmpBuf);
   
-          if (strstr (szTmpBuf, ".zip\0") && !(istat.st_mode & S_IWUSR))
+          if (strstr (szTmpBuf, ".zip\0") && (istat.st_mode & S_ISUID))
           {            
-            chmod (direntp->d_name, S_IWUSR | S_IRUSR);
+            chmod (direntp->d_name, istat.st_mode & ~S_ISUID);
             mig.cEncounteredZips++;
   
             if (!mig.fProcessLog)
