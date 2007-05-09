@@ -36,6 +36,22 @@ strlwr (char *s)
   return s;
 }
 
+
+#if defined(__CYGWIN__)
+/* Workaround for Cygwin, which is missing cfmakeraw */
+/* Pasted from man page; added in serial.c arbitrarily */
+void cfmakeraw(struct termios *termios_p)
+{
+    termios_p->c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IXON);
+    termios_p->c_oflag &= ~OPOST;
+    termios_p->c_lflag &= ~(ECHO|ECHONL|ICANON|ISIG|IEXTEN);
+    termios_p->c_cflag &= ~(CSIZE|PARENB);
+    termios_p->c_cflag |= CS8;
+}
+#endif /* defined(__CYGWIN__) */
+
+
+
 // Not sure if this is the best way to implement this, but it works.
 int
 getch (void)

@@ -36,7 +36,7 @@
 #include "logging.h"
 
 // We must change this at every new version
-#define TZ_VERSION      "0.2"
+#define TZ_VERSION      "0.3"
 
 #define MEGABYTE        1048576
 #define ARRAY_ELEMENTS  255
@@ -53,6 +53,8 @@
 #define STATUS_OUT_OF_DATE -1 // Has proper comment, but zipfile has been
                               // changed.
 #define STATUS_OK 0 // File is A-Okay.
+
+//#define S_ISTXT S_ISVTX
 
 WORKSPACE *AllocateWorkspace (void);
 void FreeWorkspace (WORKSPACE * ws);
@@ -692,7 +694,7 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
     // We need to change to the dir of the zipfile if there is one.
     // This is because the logging will pick up the current dir for
     // the filename
-    if (pDir = strrchr (pszPath, DIRSEP))
+    if ((pDir = strrchr (pszPath, DIRSEP)))
     {
       *pDir = 0;
       chdir (pszPath);
@@ -713,12 +715,12 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
     }
 
     dirp = opendir (".");
-  
+
     if (dirp)
     {
       // First set the sticky bit on all files. This is so we can skip
       // our new zipfiles if they are returned by readdir() a second time.
-      while (direntp = readdir (dirp))
+      while ((direntp = readdir (dirp)))
       {
         // Quick fudge to make the code below work
         if (qZipFile) strcpy (direntp->d_name, pszPath);
@@ -889,7 +891,9 @@ main (int argc, char **argv)
   int iCount = 0;
   int iOptionsFound = 0;
   int rc = 0;
+  #ifdef WIN32
   char *ptr = NULL;
+  #endif
 
   for (iCount = 1 ; iCount < argc ; iCount++)
   { 
@@ -902,14 +906,16 @@ main (int argc, char **argv)
       {
       case '?':
         fprintf (stdout, "\nTorrentZip v%s\n\n", TZ_VERSION);
-        fprintf (stdout, "Copyright (C) 2005 TorrentZip Team :\n");
-        fprintf (stdout, "StatMat, shindakun, Ultrasubmarine, r3nh03k and goosecreature\n");
+	  case 'h':
+        fprintf (stdout, "Copyright (C) 2005-2007 TorrentZip Team :\n");
+        fprintf (stdout, "StatMat, shindakun, Ultrasubmarine, r3nh03k and goosecreature.\n");
         fprintf (stdout, "Homepage : http://sourceforge.net/projects/trrntzip\n\n");
         fprintf (stdout, "Usage: trrntzip [OPTIONS] [PATH/ZIP FILE]\n\n");
-        fprintf (stdout, "Options:\n\n");
+        fprintf (stdout, "Options:\n");
         fprintf (stdout, "-d : strip sub-directories from zips\n");
         fprintf (stdout, "-s : prevent sub-directory recursion\n");
         fprintf (stdout, "-v : show version\n");
+        fprintf (stdout, "-h : show this help\n");
         return TZ_OK;
 
       case 'd':
@@ -940,8 +946,9 @@ main (int argc, char **argv)
 
   if (argc < 2 || iOptionsFound == (argc - 1))
   {
-    fprintf (stderr, "\ntrrntzip: missing path\n");
+    fprintf (stderr, "trrntzip: missing path\n");
     fprintf (stderr, "Usage: trrntzip [OPTIONS] [PATH/ZIP FILE]\n");
+	fprintf (stderr, "Try `trrntzip -h' for help.\n");
     return TZ_ERR;
   }
 

@@ -39,3 +39,8 @@ int getch (void);
 #endif
 
 #endif
+
+/* Cygwin doesn't have cfmakeraw */
+#if defined(__CYGWIN__)
+void cfmakeraw(struct termios *);
+#endif /* defined(__CYGWIN__) */
