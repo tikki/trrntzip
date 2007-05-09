@@ -54,7 +54,9 @@
                               // changed.
 #define STATUS_OK 0 // File is A-Okay.
 
-//#define S_ISTXT S_ISVTX
+#ifdef __WIN32__
+#define S_ISUID 644
+#endif
 
 WORKSPACE *AllocateWorkspace (void);
 void FreeWorkspace (WORKSPACE * ws);

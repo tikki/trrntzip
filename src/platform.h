@@ -27,6 +27,11 @@
 
 #ifndef WIN32
 
+/* Cygwin doesn't have cfmakeraw */
+#if defined(__CYGWIN__)
+void cfmakeraw(struct termios *);
+#endif /* defined(__CYGWIN__) */
+
 #define DIRSEP '/'
 
 char *strlwr (char *s);
@@ -40,7 +45,3 @@ int getch (void);
 
 #endif
 
-/* Cygwin doesn't have cfmakeraw */
-#if defined(__CYGWIN__)
-void cfmakeraw(struct termios *);
-#endif /* defined(__CYGWIN__) */
