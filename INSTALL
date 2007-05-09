@@ -1,0 +1,21 @@
+ __________
+ Pre-reqs 
+ ¯¯¯¯¯¯¯¯¯¯
+All platforms will require GCC to build the code. You will also need zlib v1.2.2 which
+you can get here :
+
+http://www.zlib.net/
+ ______________
+ Installation 
+ ¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+1...> Build and install zlib.
+
+2...> Copy the all the files in the src directory to somewhere on your machine.
+
+3...> Change to the directory you just created above, and run the following commands :
+
+      ./autogen.sh
+      ./configure
+      make
+      
+      If all goes well, you will end up with a trrntzip executable in the src dir.
