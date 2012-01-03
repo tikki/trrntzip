@@ -19,6 +19,17 @@
 #define UTIL_DOT_H
 
 int StringCompare (const void *str1, const void *str2);
-char **DynamicStringArray (char **StringArray, int iElements, char qCreate);
+int EndsWithCaseInsensitive(const char * str1, const char * str2);
+char **DynamicStringArrayCreate (int iElements);
+char **DynamicStringArrayDestroy (char **StringArray, int iElements);
+char **DynamicStringArrayResize (char **StringArray, int *piElements, int iNewElements);
+void DynamicStringArrayCheck (char **StringArray, int iElements);
+#ifdef NDEBUG
+#define CHECK_DYNAMIC_STRING_ARRAY( StringArray, iElements ) \
+	(void*)0
+#else
+#define CHECK_DYNAMIC_STRING_ARRAY( StringArray, iElements ) \
+	DynamicStringArrayCheck( StringArray, iElements )
+#endif
 char *get_cwd (void);
 #endif

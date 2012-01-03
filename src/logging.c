@@ -18,7 +18,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <string.h>
-#include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
 #include <stdarg.h>
@@ -42,6 +41,8 @@ logprint (FILE * stdf, FILE * f, char *format, ...)
   time_t now;
   struct tm *t;
   va_list arglist;
+  char szTimeBuffer[2048+1];
+  char szMessageBuffer[2048+1];
 
   // Only print the timestamp if this is the beginning of a line
   if (!continueline)
@@ -49,66 +50,131 @@ logprint (FILE * stdf, FILE * f, char *format, ...)
     now = time (NULL);
     t = localtime (&now);
 
-    fprintf (f, "[%04d/%02d/%02d - %02d:%02d:%02d] ",
+    sprintf (szTimeBuffer, "[%04d/%02d/%02d - %02d:%02d:%02d] ",
              t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,
              t->tm_hour, t->tm_min, t->tm_sec);
+  } else {
+    szTimeBuffer[0] = 0;
   }
 
   // Look for a newline in the passed data
   continueline = !strchr (format, '\n');
 
+  va_start (arglist, format);
+  vsprintf (szMessageBuffer, format, arglist);
+  va_end (arglist);
+
   // Print to stdout or stderr
   if (stdf)
   {
-    va_start (arglist, format);
-    vfprintf (stdf, format, arglist);
-    va_end (arglist);
-    fflush (stdf);
+    fprintf (stdf, szMessageBuffer);
   }
 
   // Print to logfile
   if (f)
   {
-    va_start (arglist, format);
-    vfprintf (f, format, arglist);
-    va_end (arglist);
+    fprintf (f, "%s%s", szTimeBuffer, szMessageBuffer);
     fflush (f);
+  }
+
+}
+
+// Used to print to screen and two files at the same time
+void
+logprint3 (FILE * stdf, FILE * f1, FILE * f2, char *format, ...)
+{
+  time_t now;
+  struct tm *t;
+  va_list arglist;
+  char szTimeBuffer[2048+1];
+  char szMessageBuffer[2048+1];
+
+  // Only print the timestamp if this is the beginning of a line
+  if (!continueline)
+  {
+    now = time (NULL);
+    t = localtime (&now);
+
+    sprintf (szTimeBuffer, "[%04d/%02d/%02d - %02d:%02d:%02d] ",
+             t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,
+             t->tm_hour, t->tm_min, t->tm_sec);
+  } else {
+    szTimeBuffer[0] = 0;
+  }
+
+  // Look for a newline in the passed data
+  continueline = !strchr (format, '\n');
+
+  va_start (arglist, format);
+  vsprintf (szMessageBuffer, format, arglist);
+  va_end (arglist);
+
+  // Print to stdout or stderr
+  if (stdf)
+  {
+    fprintf (stdf, szMessageBuffer);
+  }
+
+  // Print to logfile 1
+  if (f1)
+  {
+    fprintf (f1, "%s%s", szTimeBuffer, szMessageBuffer);
+    fflush (f1);
+  }
+
+  // Print to logfile 2
+  if (f2)
+  {
+    fprintf (f2, "%s%s", szTimeBuffer, szMessageBuffer);
+    fflush (f2);
   }
 }
 
 int
-OpenProcessLog (char * pszWritePath, MIGRATE * mig)
+OpenProcessLog (const char * pszWritePath, const char * pszRelPath, MIGRATE * mig)
 {
   int iPathLen = 0;
   time_t now;
   struct tm *t;
   char szLogname[MAX_PATH + 1];
-  char *pszPath = NULL;
+  char szRelPathBuf[MAX_PATH + 1];
   char *pszDirname = NULL;
 
   now = time (NULL);
   t = localtime (&now);
-  pszPath = get_cwd ();
 
-  if (pszPath)
+  if (pszRelPath)
   {
-    iPathLen = strlen (pszPath);
+    iPathLen = strlen (pszRelPath);
 
     if(iPathLen > 1)
     {
+      sprintf (szRelPathBuf, "%s", pszRelPath);
       // Strip off the last slash
-      pszPath[iPathLen - 1] = 0;
-      pszDirname = strrchr(pszPath, DIRSEP) + 1;
+      if (szRelPathBuf[iPathLen-1] == DIRSEP) {
+        szRelPathBuf[iPathLen - 1] = 0;
+      }
 
-      if(pszPath[iPathLen - 2] == ':')
+      pszDirname = strrchr(szRelPathBuf, DIRSEP);
+      if (pszDirname)
       {
-        pszPath[iPathLen - 2] = 0;
-        pszDirname = pszPath;
+        pszDirname++;
+      } else {
+        pszDirname = szRelPathBuf;
+      }
+
+      if(szRelPathBuf[iPathLen - 2] == ':')
+      {
+        szRelPathBuf[iPathLen - 2] = 0;
+        pszDirname = szRelPathBuf;
       }
     }
     else
     {
-      *pszPath = 'r';
+      sprintf (szRelPathBuf, "%s", "");
+      // FIXME!
+      // Note that pszDirname is not assigned!
+      // Therefore szLogname comes up as (null), which is a nice kind of undefined behaviour!
     }
   }
 
@@ -120,11 +186,9 @@ OpenProcessLog (char * pszWritePath, MIGRATE * mig)
 
   if (mig->fProcessLog)
   {
-    fprintf(mig->fProcessLog, "TorrentZip processing logfile for : \"%s\"\n\n",
-            pszPath);
+    fprintf(mig->fProcessLog, "TorrentZip processing logfile for : \"%s\"\n",
+            szRelPathBuf);
   }
-
-  free (pszPath);
 
   return mig->fProcessLog ? TZ_OK : TZ_CRITICAL;
 }

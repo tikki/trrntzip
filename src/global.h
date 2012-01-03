@@ -47,6 +47,8 @@ typedef struct _MIGRATE
 {
   unsigned int cEncounteredDirs, cEncounteredZips;
   unsigned int cRezippedZips, cOkayZips, cErrorZips;
+  double ExecTime;
+  time_t StartTime;
   int bErrorEncountered;
   FILE *fProcessLog;
 } MIGRATE;

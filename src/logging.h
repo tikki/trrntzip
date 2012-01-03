@@ -20,8 +20,9 @@
 
 #include "global.h"
 
-int OpenProcessLog (char * pszWritePath, MIGRATE * mig);
+int OpenProcessLog (const char * pszWritePath, const char * pszRelPath, MIGRATE * mig);
 FILE *OpenErrorLog (char qGUILaunch);
 void logprint (FILE * stdf, FILE * f, char *format, ...);
+void logprint3 (FILE * stdf, FILE * f1, FILE * f2, char *format, ...);
 
 #endif

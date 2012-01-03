@@ -22,6 +22,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#define NDEBUG
+#include <assert.h>
+
 #include "util.h"
 
 int
@@ -32,52 +35,113 @@ StringCompare (const void *str1, const void *str2)
   return (strcasecmp (*p1, *p2));
 }
 
-// Create/destroy a dynamic string array
+int EndsWithCaseInsensitive(const char * str1, const char * str2)
+{
+  int n1, n2;
+  n1 = strlen (str1);
+  n2 = strlen (str2);
+  if (n2<n1)
+  {
+    return strcasecmp (str1+n1-n2, str2);
+  } else {
+    return strcasecmp (str1, str2+n2-n1);
+  }
+}
+
+// Create a dynamic string array
 char **
-DynamicStringArray (char **StringArray, int iElements, char qCreate)
+DynamicStringArrayCreate (int iElements)
 {
   int iCount;
-  int iError;
+  char **StringArray;
 
-  // Create array
-  if (qCreate)
+  StringArray = (char **) calloc (sizeof (char *), iElements);
+  if (!StringArray)
+    return NULL;
+
+  for (iCount = 0; iCount < iElements; iCount++)
   {
-    StringArray = (char **) calloc (1, iElements * sizeof (char *));
-    if (!StringArray)
-      return NULL;
+    StringArray[iCount] = (char *) malloc (MAX_PATH + 1);
 
-    for (iCount = 0; iCount < iElements; iCount++)
-    {
-      StringArray[iCount] = (char *) calloc (1, MAX_PATH + 1);
-
-      // Check for error with above alloc
-      // If there is, free up everything we managed to alloc
-      // and return error
-      if (!StringArray[iCount])
-      {
-        for (iError = 0; iError < iCount; iError++)
-        {
-          free (StringArray[iError]);
-        }
-
-        free (StringArray);
-
-        return NULL;
-      }
-    }
+    // Check for error with above alloc
+    // If there is, free up everything we managed to alloc
+    // and return error
+    if (!StringArray[iCount])
+      return DynamicStringArrayDestroy( StringArray, iCount );
+    StringArray[iCount][0] = 0;
   }
-  // Destroy array
-  else
+  return (StringArray);
+}
+
+// Destroy a dynamic string array
+char **
+DynamicStringArrayDestroy (char **StringArray, int iElements)
+{
+  int iCount;
+
+  CHECK_DYNAMIC_STRING_ARRAY( StringArray, iElements );
+
+  for (iCount = 0; iCount < iElements; iCount++)
   {
-    for (iCount = 0; iCount < iElements; iCount++)
-    {
-      free (StringArray[iCount]);
-    }
-
-    free (StringArray);
+    free (StringArray[iCount]);
   }
+
+  free (StringArray);
+
+  return NULL;
+}
+
+// Resize a dynamic string array
+// to have iNewElements in total.
+// iNewElements may be larger or smaller than *piElements.
+char **
+DynamicStringArrayResize (char **StringArray, int *piElements, int iNewElements)
+{
+  int iCount;
+  char **TmpPtr = NULL;
+
+  CHECK_DYNAMIC_STRING_ARRAY( StringArray, *piElements );
+
+  for (iCount = iNewElements; iCount < *piElements; iCount++)
+  {
+    free (StringArray[iCount]);
+  }
+  TmpPtr = StringArray;
+  StringArray =
+    (char **) realloc (StringArray,
+                       iNewElements * sizeof (char *));
+  if (!StringArray)
+    return DynamicStringArrayDestroy (TmpPtr, *piElements);
+
+  for (iCount = *piElements; iCount < iNewElements; iCount++)
+  {
+    StringArray[iCount] = (char *) malloc (MAX_PATH + 1);
+
+    // Check for error with above alloc
+    // If there is, free up everything we managed to alloc
+    // and return error
+    if (!StringArray[iCount])
+      return DynamicStringArrayDestroy( StringArray, iCount );
+    StringArray[iCount][0] = 0;
+  }
+  *piElements = iNewElements;
+
+  CHECK_DYNAMIC_STRING_ARRAY( StringArray, *piElements );
 
   return (StringArray);
+}
+
+void DynamicStringArrayCheck (char **StringArray, int iElements)
+{
+  // All StringArray elements should be non-null,
+  // because they were all allocated by DynamicStringArrayCreate.
+  int i, l;
+  for (i = 0; i < iElements; ++i) {
+    assert( StringArray[i] );
+    l = strlen( StringArray[i] );
+    assert( l >= 0 );
+    assert( l <= MAX_PATH );
+  }
 }
 
 char *
