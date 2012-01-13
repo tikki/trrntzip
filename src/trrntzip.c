@@ -46,7 +46,7 @@
 #define ENDHEADERMAGIC  (0x06054b50)
 #define COMMENT_LENGTH  22 // strlen("TORRENTZIPPED-XXXXXXXX")
 #define DIVIDER         "--------------------------------------------------"
-#define TMP_FILENAME    "trrntzip.tmp"
+#define TMP_FILENAME    "trrntzip-XXXXXX"
 
 // CheckZipStatus return codes
 #define STATUS_BAD_SLASHES -6   // Zip has \ characters instead of / characters
@@ -396,7 +396,8 @@ MigrateZip (const char *zip_path, const char * pDir, WORKSPACE * ws, MIGRATE * m
     sprintf( szTmpZipFileName, "%s%c%s", pDir, DIRSEP, TMP_FILENAME );
     sprintf( szZipFileName, "%s%c%s", pDir, DIRSEP, zip_path );
   }
-
+  mktemp(szTmpZipFileName);
+  
   if (!access (szTmpZipFileName, F_OK) && remove (szTmpZipFileName))
   {
     logprint3 (stderr, mig->fProcessLog, ws->fErrorLog, "\n!!!! Temporary file exists and could not be automatically removed. Please remove the file %s and re-run this program. !!!!\n", szTmpZipFileName);
