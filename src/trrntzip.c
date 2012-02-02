@@ -15,7 +15,9 @@
 //along with this program; if not, write to the Free Software
 //Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-#include "global.h"
+#ifdef HAVE_CONFIG_H
+#include "../config.h"
+#endif
 
 #include <stdio.h>
 #include <string.h>
@@ -28,6 +30,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 #define NDEBUG
 #include <assert.h>
@@ -35,11 +38,12 @@
 #include "zip.h"
 #include "unzip.h"
 
+#include "global.h"
 #include "util.h"
 #include "logging.h"
 
 // We must change this at every new version
-#define TZ_VERSION      "0.8"
+#define TZ_VERSION      "0.9"
 
 #define MEGABYTE        1048576
 #define ARRAY_ELEMENTS  256
@@ -61,7 +65,7 @@ WORKSPACE *AllocateWorkspace (void);
 void FreeWorkspace (WORKSPACE * ws);
 int StringCompare (const void *str1, const void *str2);
 char **GetFileList (unzFile UnZipHandle, char **FileNameArray, int *piElements);
-int CheckZipStatus (FILE * f, WORKSPACE * ws);
+int CheckZipStatus (unz64_s * UnzipStream, WORKSPACE * ws);
 int ShouldFileBeRemoved(int iArray, WORKSPACE * ws);
 int ZipHasDirEntry (WORKSPACE * ws);
 int MigrateZip (const char *zip_path, const char * pDir, WORKSPACE * ws, MIGRATE * mig);
@@ -167,7 +171,7 @@ GetFileList (unzFile UnZipHandle, char **FileNameArray, int *piElements)
   int iCount = 0;
   char **TmpPtr = NULL;
 
-  unz_file_info ZipInfo;
+  unz_file_info64 ZipInfo;
 
   // The contents of the input array will be over-written.
 
@@ -185,7 +189,7 @@ GetFileList (unzFile UnZipHandle, char **FileNameArray, int *piElements)
         return NULL;
     }
 
-    unzGetCurrentFileInfo (UnZipHandle, &ZipInfo, FileNameArray[iCount], MAX_PATH, NULL, 0, NULL, 0);
+    unzGetCurrentFileInfo64 (UnZipHandle, &ZipInfo, FileNameArray[iCount], MAX_PATH, NULL, 0, NULL, 0);
 
     rc = unzGoToNextFile (UnZipHandle);
     iCount++;
@@ -200,14 +204,16 @@ GetFileList (unzFile UnZipHandle, char **FileNameArray, int *piElements)
 }
 
 int
-CheckZipStatus (FILE * f, WORKSPACE * ws)
+CheckZipStatus (unz64_s * UnzipStream, WORKSPACE * ws)
 {
   unsigned long checksum, target_checksum = 0;
-  unsigned long ch_length = 0;
-  int i = 0;
+  off_t ch_length = UnzipStream->size_central_dir;
+  off_t ch_offset = UnzipStream->central_pos - UnzipStream->size_central_dir;
+  off_t i = 0;
   char comment_buffer[COMMENT_LENGTH + 1];
   char *ep = NULL;
   unsigned char x;
+  FILE *f = (FILE *) UnzipStream->filestream;
 
   // Quick check that the file at least appears to be a zip file.
   rewind (f);
@@ -216,7 +222,7 @@ CheckZipStatus (FILE * f, WORKSPACE * ws)
 
   // Assume a TZ style archive comment and read it in. This is located at the very end of the file.
   comment_buffer[COMMENT_LENGTH] = 0;
-  if (fseek (f, -COMMENT_LENGTH, SEEK_END))
+  if (fseeko (f, -COMMENT_LENGTH, SEEK_END))
     return STATUS_ERROR;
 
   fread (comment_buffer, 1, COMMENT_LENGTH, f);
@@ -233,41 +239,8 @@ CheckZipStatus (FILE * f, WORKSPACE * ws)
     return STATUS_BAD_COMMENT;
 
   // Comment checks out so seek to 4 before it...
-  if (fseek (f, -(COMMENT_LENGTH + 4), SEEK_END))
+  if (fseeko (f, -(COMMENT_LENGTH + 4), SEEK_END))
     return STATUS_ERROR;
-
-  // ...and find the end of the central header.
-  while (1)
-  {
-    // We have to read like this to be compatible on
-    // 32bit and 64bit (and higher) systems using unsigned
-    // integers and on little-endian and big-endian processors.
-    fread (&x, 1, 1, f);
-    i = (unsigned long) x;
-    fread (&x, 1, 1, f);
-    i += ((unsigned long) x) << 8;
-    fread (&x, 1, 1, f);
-    i += ((unsigned long) x) << 16;
-    fread (&x, 1, 1, f);
-    i += ((unsigned long) x) << 24;
-    if (i == ENDHEADERMAGIC)
-      break;
-    if (fseek (f, -5, SEEK_CUR))
-      return STATUS_ERROR;
-  }
-
-  // Skip ahead and read in the central header length.
-  if (fseek (f, 8, SEEK_CUR))
-    return STATUS_ERROR;
-
-  fread (&x, 1, 1, f);
-  ch_length = (unsigned long) x;
-  fread (&x, 1, 1, f);
-  ch_length += ((unsigned long) x) << 8;
-  fread (&x, 1, 1, f);
-  ch_length += ((unsigned long) x) << 16;
-  fread (&x, 1, 1, f);
-  ch_length += ((unsigned long) x) << 24;
 
   if (ch_length > ws->iCheckBufSize)
   {
@@ -278,8 +251,8 @@ CheckZipStatus (FILE * f, WORKSPACE * ws)
       ws->iCheckBufSize = ch_length + 1024;
   }
 
-  // Skip backward to the start of the central header, and read it in.
-  if (fseek (f, -(ch_length + 16), SEEK_CUR))
+  // Skip to start of the central header, and read it in.
+  if (fseeko (f, ch_offset, SEEK_SET))
     return STATUS_ERROR;
  
   fread (ws->pszCheckBuf, 1, ch_length, f);
@@ -358,13 +331,14 @@ FindAndFixBadSlashes (WORKSPACE * ws)
 int
 MigrateZip (const char *zip_path, const char * pDir, WORKSPACE * ws, MIGRATE * mig)
 {
-  unz_file_info ZipInfo;
+  unz_file_info64 ZipInfo;
   unzFile UnZipHandle = NULL;
-  unz_s *UnzipStream = NULL;
+  unz64_s *UnzipStream = NULL;
   zipFile ZipHandle = NULL;
+  int zip64 = 0;
 
   // Used for CRC32 calc of central directory during rezipping
-  zip_internal *zintinfo;
+  zip64_internal *zintinfo;
   linkedlist_datablock_internal *ldi;
 
   // Used for our dynamic filename array
@@ -382,7 +356,7 @@ MigrateZip (const char *zip_path, const char * pDir, WORKSPACE * ws, MIGRATE * m
 
   int iBytesRead = 0;
 
-  unsigned long int cTotalBytesInZip = 0;
+  off_t cTotalBytesInZip = 0;
   unsigned int cTotalFilesInZip = 0;
 
   // Use to store the CRC32 of the central directory
@@ -410,16 +384,16 @@ MigrateZip (const char *zip_path, const char * pDir, WORKSPACE * ws, MIGRATE * m
     return TZ_ERR;
   }
 
-  if ((UnZipHandle = unzOpen (szZipFileName)) == NULL)
+  if ((UnZipHandle = unzOpen64 (szZipFileName)) == NULL)
   {
     logprint3 (stderr, mig->fProcessLog, ws->fErrorLog, "Error opening \"%s\", zip format problem. Unable to process zip.\n", szZipFileName);
     return TZ_ERR;
   }
 
-  UnzipStream = (unz_s *) UnZipHandle;
+  UnzipStream = (unz64_s *) UnZipHandle;
 
   // Check if zip is non-TZ or altered-TZ
-  rc = CheckZipStatus ((FILE *) UnzipStream->filestream, ws);
+  rc = CheckZipStatus (UnzipStream, ws);
 
   switch (rc)
   {
@@ -482,21 +456,22 @@ MigrateZip (const char *zip_path, const char * pDir, WORKSPACE * ws, MIGRATE * m
   logprint (stdout, mig->fProcessLog, "Rezipping - %s\n", szZipFileName);
   logprint (stdout, mig->fProcessLog, "%s\n", DIVIDER);
   
-  if ((ZipHandle = zipOpen (szTmpZipFileName, 0)) == NULL)
+  if ((ZipHandle = zipOpen64 (szTmpZipFileName, 0)) == NULL)
   {
     logprint3 (stderr, mig->fProcessLog, ws->fErrorLog, "Error creating temporary zip file %s. Unable to process \"%s\"\n", szTmpZipFileName, szZipFileName);
     unzClose (UnZipHandle);
     return TZ_ERR;
   }
-  
+
   for (iArray = 0; iArray < ws->iElements && ws->FileNameArray[iArray][0]; iArray++)
   {
     strcpy (szFileName, ws->FileNameArray[iArray]);
     rc = unzLocateFile (UnZipHandle, szFileName, 0);
+    zip64 = 0;
 
     if (rc == UNZ_OK)
     {
-      rc = unzGetCurrentFileInfo (UnZipHandle, &ZipInfo, szFileName, MAX_PATH, NULL, 0, NULL, 0);
+      rc = unzGetCurrentFileInfo64 (UnZipHandle, &ZipInfo, szFileName, MAX_PATH, NULL, 0, NULL, 0);
       if (rc == UNZ_OK)
         rc = unzOpenCurrentFile (UnZipHandle);
     }
@@ -515,8 +490,13 @@ MigrateZip (const char *zip_path, const char * pDir, WORKSPACE * ws, MIGRATE * m
 	  logprint (stdout, mig->fProcessLog, "Directory %s Removed\n", szFileName);
 	  continue;
     }
-	logprint (stdout, mig->fProcessLog, "Adding - %s (%lu bytes)...", szFileName, ZipInfo.uncompressed_size);
-    
+
+    // files >= 4G need to be zip64
+    if(ZipInfo.uncompressed_size >= 0xFFFFFFFF)
+     zip64 = 1;
+
+    logprint (stdout, mig->fProcessLog, "Adding - %s (%" PRIu64 " bytes%s)...", szFileName, ZipInfo.uncompressed_size, (zip64 ? ", Zip64" : ""));
+
     if (qStripSubdirs)
     {
       // To strip off path if there is one
@@ -553,7 +533,7 @@ MigrateZip (const char *zip_path, const char * pDir, WORKSPACE * ws, MIGRATE * m
     else
       pszZipName = szFileName;
 
-    rc = zipOpenNewFileInZip (ZipHandle, pszZipName, &ws->zi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+    rc = zipOpenNewFileInZip64 (ZipHandle, pszZipName, &ws->zi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION, zip64);
 
     if (rc != ZIP_OK)
     {
@@ -636,7 +616,7 @@ MigrateZip (const char *zip_path, const char * pDir, WORKSPACE * ws, MIGRATE * m
 
   // Before we close the file, we need to calc the CRC32 of
   // the central directory (for detecting a changed TZ file later)
-  zintinfo = (zip_internal *) ZipHandle;
+  zintinfo = (zip64_internal *) ZipHandle;
   crc = crc32 (0L, Z_NULL, 0);
   ldi = zintinfo->central_dir.first_block;
   while (ldi != NULL)
@@ -684,7 +664,7 @@ MigrateZip (const char *zip_path, const char * pDir, WORKSPACE * ws, MIGRATE * m
     return TZ_CRITICAL;
   }
 
-  logprint (stdout, mig->fProcessLog, "Rezipped %u compressed file%s totaling %lu byte%s.\n", cTotalFilesInZip, cTotalFilesInZip != 1 ? "s" : "", cTotalBytesInZip, cTotalBytesInZip != 1 ? "s" : "");
+  logprint (stdout, mig->fProcessLog, "Rezipped %u compressed file%s totaling %" PRIu64 " bytes.\n", cTotalFilesInZip, cTotalFilesInZip != 1 ? "s" : "", cTotalBytesInZip);
 
   return TZ_OK;
 }

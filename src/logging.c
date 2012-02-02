@@ -68,6 +68,7 @@ logprint (FILE * stdf, FILE * f, char *format, ...)
   if (stdf)
   {
     fprintf (stdf, szMessageBuffer);
+    fflush(stdf);
   }
 
   // Print to logfile

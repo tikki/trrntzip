@@ -10,7 +10,8 @@ AC_PROG_INSTALL
 
 AC_CHECK_LIB([m], [fmod], [], [AC_MSG_ERROR("Need libm to build TorrentZip")])
 AC_CHECK_LIB([z], [zlibVersion], [], [AC_MSG_ERROR("Need libz to build TorrentZip")])
+AC_SYS_LARGEFILE
+AC_FUNC_FSEEKO
 
 AC_CONFIG_FILES([Makefile src/Makefile torrentzip.spec])
-
 AC_OUTPUT

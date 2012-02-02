@@ -15,7 +15,6 @@
 //along with this program; if not, write to the Free Software
 //Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-#include "global.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,6 +24,7 @@
 #define NDEBUG
 #include <assert.h>
 
+#include "global.h"
 #include "util.h"
 
 int

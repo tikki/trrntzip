@@ -15,8 +15,6 @@
 //along with this program; if not, write to the Free Software
 //Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-#include "platform.h"
-
 #include <ctype.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -24,6 +22,7 @@
 #ifndef WIN32
 
 #include <termios.h>
+#include "platform.h"
 
 char *
 strlwr (char *s)
