@@ -732,7 +732,7 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
   
           if (strstr (szTmpBuf, ".zip\0"))
           {
-            chmod (direntp->d_name, S_IRUSR);
+            chmod (direntp->d_name, istat.st_mode & ~S_IWUSR);
           }
         }
         // Zip file is actually a dir
@@ -782,7 +782,7 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
   
           if (strstr (szTmpBuf, ".zip\0") && !(istat.st_mode & S_IWUSR))
           {            
-            chmod (direntp->d_name, S_IWUSR);
+            chmod (direntp->d_name, istat.st_mode | S_IWUSR);
             mig.cEncounteredZips++;
   
             if (!mig.fProcessLog)
