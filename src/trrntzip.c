@@ -74,6 +74,7 @@ char *pszStartPath = NULL;
 // The global flags that can be set with commandline parms.
 // Setup here so as to avoid having to pass them to a lot of functions.
 char qGUILaunch = 0;
+char qNoErrorLog = 0;
 char qNoRecursion = 0;
 char qStripSubdirs = 0;
 
@@ -870,8 +871,9 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
     
       if (mig.bErrorEncountered)
       {
-        logprint (stdout, mig.fProcessLog,
-                  "!!!! There were problems! See 'error.log' for details. !!!!\n\n");
+        if (!qNoErrorLog)
+          logprint (stdout, mig.fProcessLog,
+                    "!!!! There were problems! See 'error.log' for details. !!!!\n\n");
         qErrors = 1;
       }
 
@@ -908,6 +910,7 @@ main (int argc, char **argv)
         fprintf (stdout, "Usage: trrntzip [OPTIONS] [PATH/ZIP FILE]\n\n");
         fprintf (stdout, "Options:\n\n");
         fprintf (stdout, "-d : strip sub-directories from zips\n");
+        fprintf (stdout, "-L : don't log errors to a file\n");
         fprintf (stdout, "-s : prevent sub-directory recursion\n");
         fprintf (stdout, "-v : show version\n");
         return TZ_OK;
@@ -925,6 +928,10 @@ main (int argc, char **argv)
       case 's':
         // Disable dir recursion
         qNoRecursion = 1;
+        break;
+
+      case 'l':
+        qNoErrorLog = 1;
         break;
 
       case 'v':
@@ -967,16 +974,19 @@ main (int argc, char **argv)
 #endif
 
   pszStartPath = get_cwd();
-  
+
   if (!pszStartPath)
   {
     fprintf (stderr, "Could not get startup path!\n");
     return TZ_ERR;
   }
 
-  ws->fErrorLog = OpenErrorLog (qGUILaunch);
+  if (!qNoErrorLog)
+    ws->fErrorLog = OpenErrorLog (qGUILaunch);
+  else
+    ws->fErrorLog = NULL;
 
-  if (ws->fErrorLog)
+  if (qNoErrorLog || ws->fErrorLog)
   {
     // Start process for each passed path/zip file
     for(iCount = iOptionsFound + 1 ; iCount < argc ; iCount++)
@@ -984,7 +994,8 @@ main (int argc, char **argv)
       rc = RecursiveMigrate (argv[iCount], ws);
     }
 
-    fclose (ws->fErrorLog);
+    if (ws->fErrorLog != NULL)
+      fclose (ws->fErrorLog);
 
     if (qErrors)
     {

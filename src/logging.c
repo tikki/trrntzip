@@ -43,7 +43,7 @@ logprint (FILE * stdf, FILE * f, char *format, ...)
   va_list arglist;
 
   // Only print the timestamp if this is the beginning of a line
-  if (!continueline)
+  if (f && !continueline)
   {
     now = time (NULL);
     t = localtime (&now);
