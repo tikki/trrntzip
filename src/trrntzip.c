@@ -1015,5 +1015,5 @@ main (int argc, char **argv)
   FreeWorkspace (ws);
   free(pszStartPath);
 
-  return rc;
+  return rc || qErrors;
 }
