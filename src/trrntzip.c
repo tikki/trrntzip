@@ -461,21 +461,21 @@ MigrateZip (const char *zip_path, char * pDir, WORKSPACE * ws, MIGRATE * mig)
     {
       // To strip off path is there is one
       pszZipName = strrchr (szFileName, '/');
-  
+
       if (pszZipName)
       {
         if (!*(pszZipName + 1))
           continue; // Last char was '/' so is dir entry. Skip it.
-  
+
         pszZipName = pszZipName + 1;
       }
       else
         pszZipName = szFileName;
-  
+
       strcpy (ws->FileNameArray[iArray], pszZipName);
-  
+
       iArray2 = iArray - 1;
-  
+
       while (iArray2 > -1)
       {
         if (!strcmp (pszZipName, ws->FileNameArray[iArray2]))
@@ -485,7 +485,7 @@ MigrateZip (const char *zip_path, char * pDir, WORKSPACE * ws, MIGRATE * mig)
         }
         iArray2--;
       }
-  
+
       if (error)
       {
         logprint (stdout, mig->fProcessLog, "Not done\n\n");
@@ -669,9 +669,9 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
   strlwr (szTmpBuf);
 
   if (!strstr (szTmpBuf, ".zip\0"))
-  {    
+  {
     rc = chdir (pszPath);
-  
+
     // Couldn't change to specified path
     if (rc)
     {
@@ -706,7 +706,7 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
   if (!mig.bErrorEncountered)
   {
     pDir = get_cwd ();
-  
+
     if (!pDir)
     {
       logprint (stderr, ws->fErrorLog, "Could not get startup path!\n\n");
@@ -714,7 +714,7 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
     }
 
     dirp = opendir (".");
-  
+
     if (dirp)
     {
       // First set all the files to read-only. This is so we can skip
@@ -723,14 +723,14 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
       {
         // Quick fudge to make the code below work
         if (qZipFile) strcpy (direntp->d_name, pszPath);
-  
+
         stat (direntp->d_name, &istat);
-  
+
         if (!S_ISDIR (istat.st_mode))
         {
           sprintf (szTmpBuf, "%s", direntp->d_name);
           strlwr (szTmpBuf);
-  
+
           if (strstr (szTmpBuf, ".zip\0"))
           {
             chmod (direntp->d_name, istat.st_mode & ~S_IWUSR);
@@ -740,22 +740,22 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
         else if (qZipFile)
         {
           closedir (dirp);
-          logprint (stderr, ws->fErrorLog, 
+          logprint (stderr, ws->fErrorLog,
                     "The zip file \"%s\" is actually a directory!\n\n", pszPath);
           mig.bErrorEncountered = 1;
-          return TZ_OK; 
+          return TZ_OK;
         }
-  
+
         // We were passed a zip filename, so just break out of the loop
         if (qZipFile) break;
       }
-  
+
       rewinddir (dirp);
-  
+
       while (qZipFile || (direntp = readdir (dirp)))
       {
         stat (direntp->d_name, &istat);
-  
+
         if (S_ISDIR (istat.st_mode))
         {
           if (!qNoRecursion && strcmp (direntp->d_name, ".") &&
@@ -780,27 +780,27 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
         {
           sprintf (szTmpBuf, "%s", direntp->d_name);
           strlwr (szTmpBuf);
-  
+
           if (strstr (szTmpBuf, ".zip\0") && !(istat.st_mode & S_IWUSR))
-          {            
+          {
             chmod (direntp->d_name, istat.st_mode | S_IWUSR);
             mig.cEncounteredZips++;
-  
+
             if (!mig.fProcessLog)
             {
               rc = OpenProcessLog (pszStartPath, &mig);
-              
+
               if (rc != TZ_OK)
-              {    
+              {
                 break;
               }
             }
-  
+
             if (istat.st_size > COMMENT_LENGTH)
             {
               rc = MigrateZip (direntp->d_name, strchr(pDir, DIRSEP) ? "" : pDir,
                                 ws, &mig);
-  
+
               switch (rc)
               {
               case TZ_OK:
@@ -828,13 +828,13 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
               mig.bErrorEncountered = 1;
             }
           }
-  
+
           // We were passed a zip filename, so just break out of the loop
           if (qZipFile) break;
         }
       }
 
-      // Get our execution time (in seconds) for the conversion process 
+      // Get our execution time (in seconds) for the conversion process
       ExecTime += difftime (time (NULL), StartTime);
 
       closedir (dirp);
@@ -868,7 +868,7 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
       if (mig.cErrorZips)
         logprint (stdout, mig.fProcessLog, "  %u file%s had errors.\n",
                   mig.cErrorZips, mig.cErrorZips != 1 ? "s" : "");
-    
+
       if (mig.bErrorEncountered)
       {
         if (!qNoErrorLog)
@@ -894,8 +894,8 @@ main (int argc, char **argv)
   char *ptr = NULL;
 
   for (iCount = 1 ; iCount < argc ; iCount++)
-  { 
-    if (argv[iCount][0] == '-') 
+  {
+    if (argv[iCount][0] == '-')
     {
       iOptionsFound++;
       strlwr (argv[iCount]);

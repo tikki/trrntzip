@@ -985,27 +985,27 @@ unzlocal_CheckCurrentFileCoherencyHeader (s, piSizeVar,
       (s->cur_file_info.compression_method != Z_DEFLATED))
     err = UNZ_BADZIPFILE;
 
-  if (unzlocal_getLong (&s->z_filefunc, s->filestream, &uData) != UNZ_OK) /* date/time 
+  if (unzlocal_getLong (&s->z_filefunc, s->filestream, &uData) != UNZ_OK) /* date/time
                                                                            */
     err = UNZ_ERRNO;
 
-  if (unzlocal_getLong (&s->z_filefunc, s->filestream, &uData) != UNZ_OK) /* crc 
+  if (unzlocal_getLong (&s->z_filefunc, s->filestream, &uData) != UNZ_OK) /* crc
                                                                            */
     err = UNZ_ERRNO;
   else if ((err == UNZ_OK) && (uData != s->cur_file_info.crc) &&
            ((uFlags & 8) == 0))
     err = UNZ_BADZIPFILE;
 
-  if (unzlocal_getLong (&s->z_filefunc, s->filestream, &uData) != UNZ_OK) /* size 
-                                                                             compr 
+  if (unzlocal_getLong (&s->z_filefunc, s->filestream, &uData) != UNZ_OK) /* size
+                                                                             compr
                                                                            */
     err = UNZ_ERRNO;
   else if ((err == UNZ_OK) && (uData != s->cur_file_info.compressed_size) &&
            ((uFlags & 8) == 0))
     err = UNZ_BADZIPFILE;
 
-  if (unzlocal_getLong (&s->z_filefunc, s->filestream, &uData) != UNZ_OK) /* size 
-                                                                             uncompr 
+  if (unzlocal_getLong (&s->z_filefunc, s->filestream, &uData) != UNZ_OK) /* size
+                                                                             uncompr
                                                                            */
     err = UNZ_ERRNO;
   else if ((err == UNZ_OK) && (uData != s->cur_file_info.uncompressed_size) &&
@@ -1144,7 +1144,7 @@ unzOpenCurrentFile3 (file, method, level, raw, password)
     /* windowBits is passed < 0 to tell that there is no zlib header. Note
        that in this case inflate *requires* an extra "dummy" byte after the
        compressed stream in order to complete decompression and return
-       Z_STREAM_END. In unzip, i don't wait absolutely Z_STREAM_END because I 
+       Z_STREAM_END. In unzip, i don't wait absolutely Z_STREAM_END because I
        known the size of both compressed and uncompressed data */
   }
   pfile_in_zip_read_info->rest_read_compressed =
@@ -1346,7 +1346,7 @@ unzReadCurrentFile (file, buf, len)
       uTotalOutBefore = pfile_in_zip_read_info->stream.total_out;
       bufBefore = pfile_in_zip_read_info->stream.next_out;
 
-      /* 
+      /*
          if ((pfile_in_zip_read_info->rest_read_uncompressed ==
          pfile_in_zip_read_info->stream.avail_out) &&
          (pfile_in_zip_read_info->rest_read_compressed == 0)) flush =
