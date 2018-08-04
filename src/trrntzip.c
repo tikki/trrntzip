@@ -74,7 +74,7 @@ char *pszStartPath = NULL;
 // The global flags that can be set with commandline parms.
 // Setup here so as to avoid having to pass them to a lot of functions.
 char qGUILaunch = 0;
-char qNoErrorLog = 0;
+char qNoFileLog = 0;
 char qNoRecursion = 0;
 char qStripSubdirs = 0;
 
@@ -786,7 +786,7 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
             chmod (direntp->d_name, istat.st_mode | S_IWUSR);
             mig.cEncounteredZips++;
 
-            if (!mig.fProcessLog)
+            if (!qNoFileLog && !mig.fProcessLog)
             {
               rc = OpenProcessLog (pszStartPath, &mig);
 
@@ -847,38 +847,35 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
 
   if (rc != TZ_CRITICAL)
   {
-    if(mig.fProcessLog)
+    // Output it in hours, minutes and seconds
+    logprint (stdout, mig.fProcessLog, "Execution time %d hours ",
+              (int) ExecTime / (60 * 60));
+    ExecTime = fmod (ExecTime, (60 * 60));
+    logprint (stdout, mig.fProcessLog, "%d mins ", (int) ExecTime / 60);
+    ExecTime = fmod (ExecTime, 60);
+    logprint (stdout, mig.fProcessLog, "%d secs\n\n", (int) ExecTime);
+    logprint (stdout, mig.fProcessLog, "Checked %u zip file%s.\n",
+              mig.cEncounteredZips, mig.cEncounteredZips != 1 ? "s" : "");
+    if (mig.cRezippedZips)
+      logprint (stdout, mig.fProcessLog,
+                "  %u file%s successfully rezipped.\n", mig.cRezippedZips,
+                mig.cRezippedZips != 1 ? "s were" : " was");
+    if (mig.cOkayZips)
+      logprint (stdout, mig.fProcessLog, "  %u file%s already up to date.\n",
+                mig.cOkayZips, mig.cOkayZips != 1 ? "s were" : " was");
+    if (mig.cErrorZips)
+      logprint (stdout, mig.fProcessLog, "  %u file%s had errors.\n",
+                mig.cErrorZips, mig.cErrorZips != 1 ? "s" : "");
+
+    if (mig.bErrorEncountered)
     {
-      // Output it in hours, minutes and seconds
-      logprint (stdout, mig.fProcessLog, "Execution time %d hours ",
-                (int) ExecTime / (60 * 60));
-      ExecTime = fmod (ExecTime, (60 * 60));
-      logprint (stdout, mig.fProcessLog, "%d mins ", (int) ExecTime / 60);
-      ExecTime = fmod (ExecTime, 60);
-      logprint (stdout, mig.fProcessLog, "%d secs\n\n", (int) ExecTime);
-      logprint (stdout, mig.fProcessLog, "Checked %u zip file%s.\n",
-                mig.cEncounteredZips, mig.cEncounteredZips != 1 ? "s" : "");
-      if (mig.cRezippedZips)
+      if (!qNoFileLog)
         logprint (stdout, mig.fProcessLog,
-                  "  %u file%s successfully rezipped.\n", mig.cRezippedZips,
-                  mig.cRezippedZips != 1 ? "s were" : " was");
-      if (mig.cOkayZips)
-        logprint (stdout, mig.fProcessLog, "  %u file%s already up to date.\n",
-                  mig.cOkayZips, mig.cOkayZips != 1 ? "s were" : " was");
-      if (mig.cErrorZips)
-        logprint (stdout, mig.fProcessLog, "  %u file%s had errors.\n",
-                  mig.cErrorZips, mig.cErrorZips != 1 ? "s" : "");
-
-      if (mig.bErrorEncountered)
-      {
-        if (!qNoErrorLog)
-          logprint (stdout, mig.fProcessLog,
-                    "!!!! There were problems! See 'error.log' for details. !!!!\n\n");
-        qErrors = 1;
-      }
-
-      fclose (mig.fProcessLog);
+                  "!!!! There were problems! See 'error.log' for details. !!!!\n\n");
+      qErrors = 1;
     }
+
+    fclose (mig.fProcessLog);
   }
 
   return rc == TZ_CRITICAL ? TZ_CRITICAL : TZ_OK;
@@ -910,7 +907,7 @@ main (int argc, char **argv)
         fprintf (stdout, "Usage: trrntzip [OPTIONS] [PATH/ZIP FILE]\n\n");
         fprintf (stdout, "Options:\n\n");
         fprintf (stdout, "-d : strip sub-directories from zips\n");
-        fprintf (stdout, "-L : don't log errors to a file\n");
+        fprintf (stdout, "-L : don't create log files\n");
         fprintf (stdout, "-s : prevent sub-directory recursion\n");
         fprintf (stdout, "-v : show version\n");
         return TZ_OK;
@@ -931,7 +928,7 @@ main (int argc, char **argv)
         break;
 
       case 'l':
-        qNoErrorLog = 1;
+        qNoFileLog = 1;
         break;
 
       case 'v':
@@ -981,12 +978,12 @@ main (int argc, char **argv)
     return TZ_ERR;
   }
 
-  if (!qNoErrorLog)
+  if (!qNoFileLog)
     ws->fErrorLog = OpenErrorLog (qGUILaunch);
   else
     ws->fErrorLog = NULL;
 
-  if (qNoErrorLog || ws->fErrorLog)
+  if (qNoFileLog || ws->fErrorLog)
   {
     // Start process for each passed path/zip file
     for(iCount = iOptionsFound + 1 ; iCount < argc ; iCount++)
