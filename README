@@ -1,0 +1,155 @@
+ ________________________________
+ TorrentZip v0.2 (1st May 2005) 
+ ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+ The efficient way to prepare your zipfiles for BitTorrent.
+
+ Brought to you by the TorrentZip team :
+
+ StatMat, shindakun, Ultrasubmarine, r3nh03k and goosecreature
+
+ To get more information, read the following files (note some of these files
+ only apply to the sourcecode distrubution) :
+
+ TorrentZip for Dummies : http://mametitles.co.uk/tz/torrentzip.pdf
+ INSTALL                : How to build and install this fine product
+ README                 : Where to find out more information
+ ChangeLog              : What fine additions have been made
+ AUTHORS                : Who has been putting in time for this product
+ COPYING                : When you're allowed to use this wonderous code
+ NEWS                   : Why you should care ;-)
+ _________
+ Contact 
+ ¯¯¯¯¯¯¯¯¯
+ There are a few of ways to contact the makers and users of this project
+ (see links below). You can find many of us wasting time ... uh ... hanging
+ out in the #romtorrent channel on the IRC foreverchat network.  There is
+ also the forum at Petr1fied's fabulous website (you'll need to create an
+ account, but then, you have nothing to hide, right?).
+
+ Sourceforge homepage : https://sourceforge.net/projects/trrntzip
+ Petr1fieds's site    : http://torrent.mametitles.co.uk
+ IRC                  : irc.foreverchat.net #romtorrent
+ ________________________
+ 1. What is TorrentZip? 
+ ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+ TorrentZip (TZ) is a replacement for MAMEZip. It creates byte-for-byte exact
+ zip files on any machine. This allows people to join a torrent (after they
+ have converted their zip files with TZ) with a partial romset, thus
+ preventing them from having to download the entire set again. Because of the
+ way it creates identical zips, the file hashes will always match those in the
+ original torrent. It has been written in ANSI and POSIX compliant C such that
+ it can be built and run cross-platform (Windows, Linux, OS-X etc) and has
+ been tested on 32bit, 64bit, Little-Endian and Big-Endian architectures.
+ ___________________________________
+ 2. Why use TZ instead of MAMEZip? 
+ ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+ This section provides the key differences between TZ and MAMEZip.
+ ______________
+ 2.1 INI file 
+ ¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+ TZ does not use an INI file like MAMEZip. The way it achieves this is it
+ places a special string in the global comment of converted zips. The comment
+ looks like this:
+
+ TORRENTZIPPED-XXXXXXXX
+ e.g.
+ TORRENTZIPPED-09FE247A
+
+ The last 8 bytes is the CRC32 of all the bytes in the zip file central
+ directory. This allows TZ to detect any changes to the zip file by any app.
+ This includes ClrMAME Pro, regardless of what settings it has been configured
+ to use (retain timestamps etc). Because TZ uses this method instead of
+ storing exact path and timestamp info in an INI file (like MAMEZip), roms can
+ be moved around anywhere on your computer. Files will be still be detected as
+ already TorrentZipped wherever they are. It also means that a first-time
+ downloader does not have to TorrentZip the already TorrentZipped romset they
+ have downloaded just to get a valid INI file (as with MAMEZip).
+ ____________________
+ 2.2 Subdirectories 
+ ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+ TZ supports the scanning of subdirectories below the passed path.
+ ______________________________
+ 2.3 Supported filename chars 
+ ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+ TZ will handle any characters in the filenames, unlike MAMEZip. Examples of
+ these are the accented characters like [é] and [ü].
+ ____________________________
+ 2.4 Internal filename case 
+ ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+ TZ retains the case of internal files in the zip, unlike MAMEZip which makes
+ them all lowercase.
+ __________
+ 2.5 Logs 
+ ¯¯¯¯¯¯¯¯¯¯
+ TZ creates log files, one for processing info ([DIR]_[TIMESTAMP].log), and one
+ for errors (error.log). This allows the user to review a long conversion
+ process after it has completed.
+ ____________
+ 2.6 Errors 
+ ¯¯¯¯¯¯¯¯¯¯¯¯
+ TZ won't stop the complete process when an error is found. When MAMEZip
+ discovered a zip it couldn't handle (i.e. a corrupt file), it would stop
+ completely. TZ will simply log the error, and move onto the next zip file.
+ __________
+ 2.7 zlib 
+ ¯¯¯¯¯¯¯¯¯¯
+ TZ uses the excellent zlib library, unlike JazzLib in MAMEZip. TZ achieves
+ slightly better compression as a result.
+ __________________
+ 2.8 Written in C 
+ ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+ TZ is written in C, so it's considerably faster than MAMEZip.
+ ________________________
+ 3. Usage (commandline) 
+ ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+ TZ is very simple to use. It's a commandline app, so it has commandline
+ parameters. This main parameter is the path/zip file that contains the roms
+ you want to convert to TZ format. Remember, if a path is passed TZ supports
+ sub-directories, so it will also scan these under the path you provide.
+ Therefore, the calling convention is as follows :
+
+ trrntzip <OPTIONS> <PATH/ZIP FILE>
+
+ You don't have to use the commandline if you don't wish to. You can drag a
+ folder to the executable within your GUI OS environment. This will
+ automatically pass the path to TZ. You can then review the log files that TZ
+ creates during the process.
+ _________________________
+ 3.1 Commandline options 
+ ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+ -? : show commandline help
+ -d : strip sub-directories from zips
+ -s : prevent sub-directory recursion
+ -v : show version
+ ________________
+ 4. Usage (GUI) 
+ ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+ Also available on the Sourceforge homepage is a Java based GUI for those that
+ wish to use it. Please see the TorrentZip for Dummies document linked to at
+ the start of this document for instructions on it's use.
+ _______________________
+ 5. Credits and Thanks 
+ ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+ There are so many people who have been instrumental in getting this project up
+ and running (aside from the authors - you can read AUTHORS for the skinny on
+ those geeks). TorrentZip would never have existed if it wasn't for the great
+ people over at the Pleasuredome Trinity web-sites, who have extensively used
+ MAMEZip for their rom torrents, making it very easy to for everyone to keep
+ up-to-date. Here are the links to these web-sites :
+
+ http://www.pleasuredome.org.uk          - Main Pleasuredome site
+ http://torrent.mametitles.co.uk         - Full Roms and Extras
+ http://chd.pleasuredome.org.uk:1000     - MAME CHDs and CHD sooners
+ http://strath.mametitles.co.uk/tracker  - Updates and rollbacks
+
+ We would like to thank the following people for their assistance and support
+ during the construction of TZ (in no particular order) :
+
+ Jano        : The original author of MAMEZip, without which we would not be
+               inspired.
+ Petr1fied   : For the great site.
+ Tor_RentBoy : For the abuse.
+
+ Others : Rupert, MisterWhite, strath, BB, Cockney_Geezer, Sulako, gunner23_98,
+          emuLOAD, kevin, Ataru, Baraka, kelrod, Connie, harrierattack, coombsb
+          and Zanny

@@ -1,0 +1,51 @@
+Summary:    The TorrentZip Recompressor
+Name:       @PACKAGE@
+Version:    @VERSION@
+Release:    0
+Epoch:      1
+License:    GPL
+Group:      Applications/Internet
+URL:        http://torrent.mametitles.co.uk/
+Packager:   %{packager}
+Source:     %{name}-%{version}.tgz
+BuildRoot:  %{_tmppath}/%{name}-%{version}-root
+
+%description
+This program allows a possible BitTorrent seeder of large number of zipped files
+to provide consistant file compression.  If the sender and the recipient both
+use TorrentZip to recompress their files, the zipfiles should have a similar
+byte pattern.  This should allow torrent downloads to happen faster.
+
+%prep
+%setup
+
+%build
+CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix=%{_prefix} \
+                                    --bindir=%{_bindir} \
+                                    --datadir=%{_datadir} \
+                                    --includedir=%{_includedir} \
+                                    --libdir=%{_libdir} \
+                                    --mandir=%{_mandir} \
+                                    --sysconfdir=%{_sysconfdir} 
+
+make
+
+%install
+rm -rf %{buildroot}
+make prefix=%{buildroot}%{_prefix} bindir=%{buildroot}%{_bindir} \
+     datadir=%{buildroot}%{_datadir} includedir=%{buildroot}%{_includedir} \
+     libdir=%{buildroot}%{_libdir} mandir=%{buildroot}%{_mandir} \
+     sysconfdir=%{buildroot}%{_sysconfdir} \
+     install
+
+%clean
+rm -rf %{buildroot}
+
+%files
+%defattr(-, root, root)
+
+/usr/bin/trrntzip
+
+%changelog
+* Mon Mar 28 2005 r3nh03k <renhoek@gmail.com>
+- Initial Release
