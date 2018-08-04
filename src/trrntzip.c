@@ -690,16 +690,6 @@ RecursiveMigrate (const char *pszPath, WORKSPACE * ws)
       mig.bErrorEncountered = 1;
     }
 
-    // We need to change to the dir of the zipfile if there is one.
-    // This is because the logging will pick up the current dir for
-    // the filename
-    if (pDir = strrchr (pszPath, DIRSEP))
-    {
-      *pDir = 0;
-      chdir (pszPath);
-      *pDir = DIRSEP;
-    }
-
     qZipFile = 1;
   }
 
